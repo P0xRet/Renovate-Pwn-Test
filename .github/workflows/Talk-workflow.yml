@@ -1,48 +1,27 @@
-name: Auto approve renovate PRs - Talk Android
+name: Dependency bot auto-approve
 
 on:
-  pull_request_target: # zizmor: ignore[dangerous-triggers]
-    branches:
-      - main
-      - master
-      - stable*
+  pull_request:
+    types: [opened, synchronize, reopened]
 
 permissions:
+  pull-requests: write
   contents: read
 
-concurrency:
-  group: renovate-approve-merge-${{ github.head_ref || github.run_id }}
-  cancel-in-progress: true
-
 jobs:
-  auto-approve-merge:
-    if: github.event.pull_request.user.login == 'renovate[bot]'
+  dependency-bot:
     runs-on: ubuntu-latest
-    permissions:
-      # for hmarr/auto-approve-action to approve PRs
-      pull-requests: write
-
+    if: ${{ github.actor == 'dependabot[bot]' || github.actor == 'renovate[bot]' }}
     steps:
-      - uses: mdecoleman/pr-branch-name@55795d86b4566d300d237883103f052125cc7508 # v3.0.0
-        id: branchname
-        with:
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
-
-      # GitHub actions bot approve
-      - uses: hmarr/auto-approve-action@f0939ea97e9205ef24d872e76833fa908a770363 # v4.0.0
-        if: github.actor == 'renovate[bot]'
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-
-      - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
-        with:
-          ref: ${{ github.head_ref }}
-
-      # Enable GitHub auto merge
-      - name: Enable Pull Request Automerge
-        if: github.actor == 'renovate[bot]'
-        run: gh pr merge --merge --auto
+      - name: Approve Dependabot / Renovate PR
+        run: gh pr review "$PR_URL" --approve --body "Auto-approval for dependency bot PR."
         env:
-          GH_TOKEN: ${{ secrets.AUTOMERGE }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-          
+      # Optional: add a label so it's obvious it's safe to merge
+      - name: Add ready-to-merge label
+        run: gh pr edit "$PR_URL" --add-label "deps-ready"
+        env:
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
