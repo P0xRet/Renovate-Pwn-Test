@@ -7,7 +7,7 @@
     "minimist": "0.0.8",
     "ua-parser-js": "0.7.28",
     "jquery": "3.4.0",
-    "kind-of": "6.0.2"
+    "kind-of": "6.0.3"
 
 
   }
